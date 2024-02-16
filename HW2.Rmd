@@ -55,9 +55,9 @@ glm_logit=glm(resp~x, family=binomial(link='logit'))
 glm_probit=glm(resp~x, family=binomial(link='probit'))
 glm_clog=glm(resp~x, family=binomial(link='cloglog')) # asymmetric
 
-confint(glm_logit) [2,2]
-confint(glm_probit) [2,2]
-confint(glm_clog)[2,2]
+confint.default(glm_logit) [2,2]
+confint.default(glm_probit) [2,2]
+confint.default(glm_clog)[2,2]
 summary(glm_logit)$deviance
 summary(glm_probit)$deviance
 summary(glm_clog)$deviance
@@ -69,10 +69,10 @@ pred_3 = predict(glm_clog, newdata = data.frame(x = 0.01), type = "response")
 data.frame(
     estimate_of_beta = c(summary(glm_logit)$coeff[2,1], summary(glm_probit)$coeff[2,1],
                          summary(glm_clog)$coeff[2,1]), 
-    ci_lower = c(confint(glm_logit) [2,1], confint(glm_probit) [2,1],
-                 confint(glm_clog)[2,1]),
-    ci_upper = c(confint(glm_logit) [2,2], confint(glm_probit) [2,2],
-                 confint(glm_clog)[2,2]),
+    ci_lower = c(confint.default(glm_logit) [2,1], confint(glm_probit) [2,1],
+                 confint.default(glm_clog)[2,1]),
+    ci_upper = c(confint.default(glm_logit) [2,2], confint.default(glm_probit) [2,2],
+                 confint.default(glm_clog)[2,2]),
     deviance = c(summary(glm_logit)$deviance, summary(glm_probit)$deviance,
                  summary(glm_clog)$deviance), 
     estimated_probability = c(pred_1, pred_2, pred_3))|>
