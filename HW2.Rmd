@@ -35,35 +35,54 @@ theme_set(theme_minimal() + theme(legend.position = "bottom"))
 
 ### (a)
 ```{r}
-df =
-  tibble(
-  dozens = c(rep(0, 30), rep(1,30), rep(2,30), rep(3,30), rep(4, 30)),  
-  dying = c(rep(1,2), rep(0,28), rep(1,8), rep(0,22), rep(1,15), rep(0,15), rep(1,23), rep(0,7), rep(1,27), rep(0,3)))
+# load data
+dose=c(0, 1, 2, 3, 4)## x_i
+num=c(30, 30, 30, 30, 30) ## m_i
+killed=c(2, 8, 15, 23, 27) ## y_i
+data=data.frame(dose,num,killed) ## (x_i, m_i, y_i)
 ```
 
 ```{r}
-fit_logit = 
-  df |> 
-  glm(dying~dozens,family=binomial(link='logit'), data = _) |> 
-  summary() 
-fit_logit
+# data preparation
+x=data$dose
+y=data$killed
+m=data$num
+resp=cbind(y,m-y)   #### counts of success (death=1), failure (surv=0)
 ```
 
 ```{r}
-fit_probit = 
-  df |> 
-  glm(dying~dozens,family=binomial(link='probit'), data = _) |> 
-  summary() 
-fit_probit
+glm_logit=glm(resp~x, family=binomial(link='logit'))
+glm_probit=glm(resp~x, family=binomial(link='probit'))
+glm_clog=glm(resp~x, family=binomial(link='cloglog')) # asymmetric
+summary(glm_logit) # Wald test of coefficients
+summary(glm_probit)
+summary(glm_clog)
 ```
 
 ```{r}
-fit_cloglog = 
-  df |> 
-  glm(dying~dozens,family=binomial(link='cloglog'), data = _) |> 
-  summary() 
-fit_cloglog
+out=predict(glm_logit, data.frame(x=c(0.01)), se.fit=TRUE)
+out
 ```
 
+### (b)
+```{r}
+dose=c(0, 1, 2, 3, 4)## x_i
+num=c(30, 30, 30, 30, 30) ## m_i
+killed=c(2, 8, 15, 23, 27) ## y_i
+log10Dose=log10(dose)
+data=data.frame(log10Dose,num,killed) ## (x_i, m_i, y_i)
 
+# data preparation
+x=data$log10Dose
+y=data$killed
+m=data$num
+resp=cbind(y,m-y)   #### counts of success (death=1), failure (surv=0)
+```
+<!-- glm_logit=glm(resp~x, family=binomial(link='logit')) -->
+<!-- glm_probit=glm(resp~x, family=binomial(link='probit')) -->
+<!-- glm_clog=glm(resp~x, family=binomial(link='cloglog')) # asymmetric -->
+<!-- summary(glm_logit) # Wald test of coefficients -->
+<!-- summary(glm_probit) -->
+<!-- summary(glm_clog) -->
+```
 
