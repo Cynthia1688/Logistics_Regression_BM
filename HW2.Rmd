@@ -148,7 +148,7 @@ LD50_func(glm_logit, "logit") |>
 
 Use logistics regression with logit link, we obtained model:
 
-$$g(Offers - Enrolls) = log() = \alpha + \beta * Amount$$
+$$log odds(Enrolls) = \hat{\alpha} + \hat{\beta} * Amount$$
 ```{r}
 amount=seq(10, 90, by = 5)
 offers=c(4, 6, 10, 12, 39, 36, 22, 14, 10, 12, 8, 9, 3, 1, 5, 2, 1)
