@@ -74,16 +74,47 @@ results_func(glm_logit, "logit") |>
   knitr::kable(digits = 4)
 ```
 
-(a) All models showed a significant relationship between dose and death with significant p-values less than 0.001.
+Comments:
 
-(b) As the dose increases, the probability of death decreases because all CIs for the dose estimates are positive and do not include zero.
+* All models showed a significant relationship between dose and death with significant p-values less than 0.001.
 
-(c) The probit link model fits the data best since it minimizes residual deviance.
+* As the dose increases, the probability of death decreases because all CIs for the dose estimates are positive and do not include zero.
 
-(d) The probability of death estimated using the probit link model at a dose level of 0.01 was 0.0853.
+* The probit link model fits the data best since it minimizes residual deviance.
+
+* The probability of death estimated using the probit link model at a dose level of 0.01 was 0.0853.
 
 ### (b) Suppose that the dose level is in natural logarithm scale, estimate LD50 with 90% confidence interval based on the three models.
 
+Given:
+
+$$Var(\hat{x_0}) = (\frac{\partial{x_0}}{\partial{\alpha}})^2Var(\hat{\alpha}) + (\frac{\partial{x_0}}{\partial{\beta}})^2Var(\hat{\beta}) +
+2(\frac{\partial{x_0}}{\partial{\alpha}})(\frac{\partial{x_0}}{\partial{\beta}})Cov(\hat{\alpha},\hat{\beta})$$
+
+90% CI: $$[\hat{x_0} - Z_{0.95}*\sqrt{Var(\hat{x_0})}, \hat{x_0} + Z_{0.95}*\sqrt{Var(\hat{x_0})}]$$.
+
+Point estimate for LD50 is $exp(\hat{x_0})$; 90% CI for LD50 is $[e^{\hat{X_L}}, e^{\hat{X_R}}]$.
+
+For model using logit link, when $\pi_0 = 0.5,\ g(\pi_0) = log(\frac{\pi_0}{1-\pi{0}}) = 0 = \alpha + \beta X$. For model using probit link, when $\pi_0 = 0.5, \ g(\pi_0) = {\phi}^{-1}(\pi_0) = 0 = \alpha + \beta X$. For model using comlimentary log-log link, when $\pi_0 = 0.5, g(\pi_0) = log(-log(1-\pi_0)) = log(-log(0.5)) = \alpha + \beta X$.
+
+Then, for the models using lgit link and probit link,
+
+$$\hat{x_0} = - \frac{\hat{\alpha}}{\hat{\beta}}$$
+
+$$var(\hat{x_0}) =
+\frac{1}{\hat{\beta^2}}Var(\hat{\alpha})+
+\frac{\hat{\alpha^2}}{\hat{\beta}^4}Var(\hat{\beta})-
+2\frac{\hat{\alpha}}{\hat{\beta^3}}Cov(\hat{\alpha},\hat{\beta})$$
+
+If we use complementary log-log link,
+
+$$\hat{x_0} = \frac{log(-log(0.5))-\hat{\alpha}}{\hat{\beta}}$$
+
+$$var(\hat{x_0}) = \frac{1}{\hat{\beta^2}}Var(\hat{\alpha})+
+\frac{(log(-log(0.5))-\hat{\alpha})^2}{\hat{\beta}^4}Var(\hat{\beta})+
+2\frac{log(-log(0.5))-\hat{\alpha}}{\hat{\beta^3}}Cov(\hat{\alpha},\hat{\beta})$$
+
+Implementation:
 ```{r}
 LD50_func = function(fit, model){
   alpha = fit$coefficients[1]
@@ -115,6 +146,9 @@ LD50_func(glm_logit, "logit") |>
 
 ## Problem 2
 
+Use logistics regression with logit link, we obtained model:
+
+$$g(Offers - Enrolls) = log() = \alpha + \beta * Amount$$
 ```{r}
 amount=seq(10, 90, by = 5)
 offers=c(4, 6, 10, 12, 39, 36, 22, 14, 10, 12, 8, 9, 3, 1, 5, 2, 1)
