@@ -33,78 +33,118 @@ theme_set(theme_minimal() + theme(legend.position = "bottom"))
 
 ## Problem_1
 
-### (a)
-```{r}
-# load data
-dose=c(0, 1, 2, 3, 4)## x_i
-num=c(30, 30, 30, 30, 30) ## m_i
-killed=c(2, 8, 15, 23, 27) ## y_i
-data=data.frame(dose,num,killed) ## (x_i, m_i, y_i)
-```
+### (a) Fill out the table and give comments.
 
 ```{r}
+# load data
+dose=c(0:4)## x_i
+num=rep(30, 5) ## m_i
+killed=c(2, 8, 15, 23, 27) ## y_i
+data=data.frame(dose,num,killed) ## (x_i, m_i, y_i)
+
 # data preparation
 x=data$dose
 y=data$killed
 m=data$num
 resp=cbind(y,m-y)   #### counts of success (death=1), failure (surv=0)
-```
 
-```{r}
+# Model fitting
+# logit link
 glm_logit=glm(resp~x, family=binomial(link='logit'))
+# probit link
 glm_probit=glm(resp~x, family=binomial(link='probit'))
+# complementary log-log link
 glm_clog=glm(resp~x, family=binomial(link='cloglog')) # asymmetric
 
-confint.default(glm_logit) [2,2]
-confint.default(glm_probit) [2,2]
-confint.default(glm_clog)[2,2]
-summary(glm_logit)$deviance
-summary(glm_probit)$deviance
-summary(glm_clog)$deviance
+results_func = function(fit,model){
+  fit_summary = fit |> summary()
+  beta = fit_summary$coefficients[2]
+  CI = fit$coefficients +
+    kronecker(t(c(0,qnorm(0.025),-qnorm(0.025))), t(t(sqrt(diag(vcov(fit))))))
+  CI_lower = CI[2,2]
+  CI_upper = CI[2,3]
+  dev = fit_summary$deviance
+  p_new = predict.glm(fit, newdata = tibble(x = 0.01), type = "response")
+  return(tibble(model, beta, CI_lower, CI_upper, dev, p_new))
+}
 
-pred_1 = predict(glm_logit, newdata = data.frame(x = 0.01), type = "response")
-pred_2 = predict(glm_probit, newdata = data.frame(x = 0.01), type = "response")
-pred_3 = predict(glm_clog, newdata = data.frame(x = 0.01), type = "response")
-
-data.frame(
-    estimate_of_beta = c(summary(glm_logit)$coeff[2,1], summary(glm_probit)$coeff[2,1],
-                         summary(glm_clog)$coeff[2,1]), 
-    ci_lower = c(confint.default(glm_logit) [2,1], confint(glm_probit) [2,1],
-                 confint.default(glm_clog)[2,1]),
-    ci_upper = c(confint.default(glm_logit) [2,2], confint.default(glm_probit) [2,2],
-                 confint.default(glm_clog)[2,2]),
-    deviance = c(summary(glm_logit)$deviance, summary(glm_probit)$deviance,
-                 summary(glm_clog)$deviance), 
-    estimated_probability = c(pred_1, pred_2, pred_3))|>
+results_func(glm_logit, "logit") |> 
+  rbind(results_func(glm_probit, "probit")) |> 
+  rbind(results_func(glm_clog, "c-log-log")) |> 
   knitr::kable(digits = 4)
 ```
 
-### (b)
+(a) All models showed a significant relationship between dose and death with significant p-values less than 0.001.
+
+(b) As the dose increases, the probability of death decreases because all CIs for the dose estimates are positive and do not include zero.
+
+(c) The probit link model fits the data best since it minimizes residual deviance.
+
+(d) The probability of death estimated using the probit link model at a dose level of 0.01 was 0.0853.
+
+### (b) Suppose that the dose level is in natural logarithm scale, estimate LD50 with 90% confidence interval based on the three models.
+
 ```{r}
-dose=c(0, 1, 2, 3, 4)## x_i
-num=c(30, 30, 30, 30, 30) ## m_i
-killed=c(2, 8, 15, 23, 27) ## y_i
-data=data.frame(dose,num,killed) ## (x_i, m_i, y_i)
+LD50_func = function(fit, model){
+  alpha = fit$coefficients[1]
+  beta = fit$coefficients[2]
+  betacov = vcov(fit)
+  if(model == "c-log-log"){
+    x0fit = (log(-log(0.5)) - alpha) /beta
+    varx0 = betacov[1,1]/(beta^2)+
+      betacov[2,2]*(log(-log(0.5)) - alpha) ^ 2 / (beta ^ 4) + 2 * betacov[1,2] * (log(-log(0.5)) - alpha) / (beta ^ 3)
+  }
+  else
+  {
+    x0fit = -alpha / beta
+    varx0 = betacov[1,1] / (beta ^ 2) +
+      betacov[2,2] * (alpha ^ 2) / (beta ^ 4) - 
+      2 * betacov[1,2] *alpha / (beta ^ 3)
+  }
+  estimate = exp(x0fit)
+  CI_lower = exp(x0fit - c(qnorm(0.95)) * sqrt(varx0))
+  CI_upper = exp(x0fit + c(qnorm(0.95))*sqrt(varx0))
+  return(tibble(model, estimate, CI_lower, CI_upper))
+}
 
-# data preparation
-x=data$dose
-y=data$killed
-m=data$num
-resp=cbind(y,m-y)   #### counts of success (death=1), failure (surv=0)
-glm_logit=glm(resp~x, family=binomial(link='logit')) 
-glm_probit=glm(resp~x, family=binomial(link='probit')) 
-glm_clog=glm(resp~x, family=binomial(link='cloglog')) # asymmetric 
-summary(glm_logit) # Wald test of coefficients 
-summary(glm_probit) 
-summary(glm_clog) 
+LD50_func(glm_logit, "logit") |> 
+  rbind(LD50_func(glm_probit, "probit")) |> 
+  rbind(LD50_func(glm_clog, "c-log-log")) |> 
+  knitr::kable(digits = 2)
+```
 
-beta0=glm_logit$coefficients[1]
-beta1=glm_logit$coefficients[2]
-betacov=vcov(glm_logit) # inverse fisher information
-x0fit=-beta0/beta1
-10^x0fit # point estimate of LD50
-varx0=betacov[1,1]/(beta1^2)+betacov[2,2]*(beta0^2)/(beta1^4)-2*betacov[1,2]*beta0/(beta1^3)
-c(x0fit,sqrt(varx0)) # point est and se
-10^(x0fit+c(qnorm(0.05),-qnorm(0.05))*sqrt(varx0)) # 90% CI for LD50
+## Problem_2
+
+```{r}
+amount=seq(10, 90, by = 5)
+offers=c(4, 6, 10, 12, 39, 36, 22, 14, 10, 12, 8, 9, 3, 1, 5, 2, 1)
+enrolls=c(0, 2, 4, 2, 12, 14, 10, 7, 5, 5, 3, 5, 2, 0, 4, 2, 1)
+data=data.frame(amount, offers, enrolls)
+```
+
+```{r}
+glm_logit_2 = glm(cbind(enrolls, offers - enrolls) ~ amount,
+                family = binomial(link = "logit"))
+glm_logit_2 |> summary()
+```
+
+### (a) How does the model fit the data?
+
+Since most of the offers are less than 30, we can assume that the data is sparse. Therefore, we should use the Hosmer-Lemeshow statistic to evaluate the goodness of fit.
+
+```{r}
+library(ResourceSelection)
+```
+
+```{r}
+hoslem_stat = hoslem.test(glm_logit_2$y, fitted(glm_logit_2), g = 10)
+hoslem_stat
+```
+Because p = 0.9907 > 0.05, we fail to reject the null and conclude that the model fits the data well at 95% significant level.
+
+### (b) How do you interpret the relationship between the scholarship amount and enrollment rate? What is 95% CI?
+
+```{r}
+
 ```
 
