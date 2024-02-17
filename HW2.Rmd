@@ -31,7 +31,7 @@ scale_fill_discrete = scale_fill_viridis_d
 theme_set(theme_minimal() + theme(legend.position = "bottom"))
 ```
 
-## Problem_1
+## Problem 1
 
 ### (a) Fill out the table and give comments.
 
@@ -113,7 +113,7 @@ LD50_func(glm_logit, "logit") |>
   knitr::kable(digits = 2)
 ```
 
-## Problem_2
+## Problem 2
 
 ```{r}
 amount=seq(10, 90, by = 5)
@@ -130,7 +130,7 @@ glm_logit_2 |> summary()
 
 ### (a) How does the model fit the data?
 
-Since most of the offers are less than 30, we can assume that the data is sparse. Therefore, we should use the Hosmer-Lemeshow statistic to evaluate the goodness of fit.
+Since most of the offers are less than 30, we can assume that the data is sparse. Therefore, we should use the Hosmer-Lemeshow statistic to evaluate the goodness of fit:
 
 ```{r}
 library(ResourceSelection)
@@ -140,11 +140,48 @@ library(ResourceSelection)
 hoslem_stat = hoslem.test(glm_logit_2$y, fitted(glm_logit_2), g = 10)
 hoslem_stat
 ```
-Because p = 0.9907 > 0.05, we fail to reject the null and conclude that the model fits the data well at 95% significant level.
+
+* Since $p-value = 0.9907 > 0.05$, we failed to reject the null hypothesis and therefore concluded that the model fits the data well at 95% significant level.
 
 ### (b) How do you interpret the relationship between the scholarship amount and enrollment rate? What is 95% CI?
 
 ```{r}
-
+logit_summary = glm_logit_2 |> summary()
+beta_exp = exp(logit_summary$coefficients[2])
+CI_exp = exp(glm_logit_2$coefficients + 
+               kronecker(t(c(0,qnorm(0.025), -qnorm(0.025))),t(t(sqrt(diag(vcov(glm_logit_2)))))))
+CI_beta_exp = str_c("[", CI_exp[2,2] |> round(2), ", ", CI_exp[2,3] |> round(2), "]", sep = "")
 ```
+
+* The model shows that there is a significant relationship between the scholarship amount and enrollment rate. 
+
+* The 95% confidence interval is [1.01, 1.05].
+
+### (c) How much scholarship should we provide to get 40% yield rate (the percentage of admitted students who enroll?) What is the 95% CI?
+
+When $\pi_0 = 0.4, g(\pi_0) = log(\frac {\pi_0}{1-\pi_0}) = log(\frac{2}{3}) = \alpha + \beta X$ Then,
+$$\hat{x_0} = \frac{log(\frac{2}{3})-\hat{\alpha}}{\hat{\beta}}$$
+
+$$var(\hat{x_0}) = \frac{1}{\hat{\beta^2}}Var(\hat{\alpha})+\frac{log(\frac{2}{3})-\hat{\alpha}}{\hat{\beta}^4}Var(\hat{\beta})+2\frac{log(\frac{2}{3})-\hat{\alpha}}{\hat{\beta^3}}Cov(\hat{\alpha},\hat{\beta})$$
+
+Therefore, we can estimate the scholarship amount and its 95% CI as follows:
+
+```{r}
+alpha_hat = glm_logit_2$coefficients[1]
+beta_hat = glm_logit_2$coefficients[2]
+beta_cov = vcov(glm_logit_2) # inverse of fisher-information
+x0_hat = (log(2/3) - alpha_hat) / beta_hat
+var_x0 = 
+  beta_cov[1,1] / (beta_hat^2) +
+ (log(2/3) - alpha_hat)^2 / (beta_hat^4) * beta_cov[2,2] +
+  2 * (log(2/3) - alpha_hat) / beta_hat^3 * beta_cov[1,2]
+CI_lower = x0_hat - c(qnorm(0.975)) * sqrt(var_x0)
+CI_upper = x0_hat + c(qnorm(0.975)) * sqrt(var_x0)
+tibble(estimate = x0_hat, CI_lower, CI_upper) |> knitr::kable(digits = 4)
+```
+
+* Therefore, approximately 40,000 dollars scholarship should be provided to get 40% yield rate.
+
+* The 95% CI is [30.583, 49.686].
+
 
